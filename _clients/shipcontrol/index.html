@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Stilgrenze Pirates</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        body {
+            background-image: url(assets/Screen_background.png);
+            background-size: cover;
+            padding-top: 150px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="app">
+        <div v-if="error != ''" class="alert alert-danger" role="alert">
+            {{ error }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" @click="error = ''">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <h1>Pirate Ship Control</h1>
+            </div>
+        </div>
+        <div class="row" v-if="!ready">
+            <div class="col-md-4">
+                <form @submit.prevent="register">
+                    <div class="form-group">
+                        <label for="shipName">Team Name</label>
+                        <input v-model="team.Name" type="text" class="form-control" id="shipName" placeholder="Teamname">
+                        <small id="teamNameHelp" class="form-text text-muted">Your Team Name</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="secret">Secret</label>
+                        <input v-model="team.Secret" type="password" class="form-control" id="secret" placeholder="Secret">
+                        <small id="secretHelp" class="form-text text-muted">Well be saved in local storage</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+            </div>
+        </div>
+        <div class="row" v-if="ready">
+            <div class="col-md-12">
+                <h2>Team: {{ team.Name }}</h2>
+                <h3>Gold: {{ team.Gold }}</h3>
+                <hr />
+            </div>
+            <div class="col-md-4">
+                <h2>Buy Ship</h2>
+                <p>A ship costs 2000 gold + 1000 gold per option (1 per default)</p>
+                <form @submit.prevent="buyShip">
+                    <div class="form-group">
+                        <input v-model="newShip.ShipName" type="text" class="form-control" placeholder="Ship Name">
+                    </div>
+                    <div class="form-group">
+                        <input v-model="newShip.Canons" type="text" class="form-control" placeholder="Canons">
+                    </div>
+                    <div class="form-group">
+                        <input v-model="newShip.Sight" type="text" class="form-control" placeholder="Sight">
+                    </div>
+                    <div class="form-group">
+                        <input v-model="newShip.Speed" type="text" class="form-control" placeholder="Speed">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Buy Ship</button>
+                </form>
+            </div>
+            <div class="col-md-8">
+                <h2>Ships</h2>
+                <table class="table table-dark">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">id</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Canons</th>
+                        <th scope="col">Speed</th>
+                        <th scope="col">Sight</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(ship, index) in ships">
+                            <th scope="row">{{ index }}</th>
+                            <td>{{ ship.id }}</td>
+                            <td>{{ ship.name }}</td>
+                            <td>{{ ship.canons }}</td>
+                            <td>{{ ship.speed }}</td>
+                            <td>{{ ship.sight }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="vue.js"></script>
+<script>
+    // TODO Insert URL of the Server here
+    const URL = 'localhost:1337/';
+
+    // Better you change nothing here, if you don't know what you do
+    var app = new Vue({
+        el: '#app',
+        data: {
+            error: '',
+            ready: false,
+            ships: [],
+            team: {
+                Name: '',
+                Secret: '',
+                Gold: 0,
+                GoldSpent: 0,
+                Ships: null
+            },
+            newShip: {
+                ShipName: '',
+                Canons: '',
+                Sight: '',
+                Speed: '',
+            }
+        },
+        created: function () {
+            if (window.localStorage.getItem('team') !== null) {
+                this.team = JSON.parse(window.localStorage.getItem('team'));
+                window.SECRET = this.team.Secret;
+                window.TEAM = this.team.Name;
+                this.ready = true;
+                this.getPlayer();
+                this.getShips(true);
+            }
+
+            setInterval(() => {
+                if (window.TEAM !== undefined && window.SECRET !== undefined) {
+                    this.getPlayer();
+                    this.getShips();
+                }
+            }, 1000);
+        },
+        methods: {
+            getShips(init) {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://'+URL+'ships'+'/'+TEAM+'/'+SECRET;
+                xhr.open('GET', url);
+                xhr.send();
+                xhr.onreadystatechange = (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 200) {
+                        let ships = JSON.parse(xhr.responseText);
+                        this.ships = ships;
+
+                        if (init) {
+                            for (var i = 0; i < this.ships.length; i++) {
+                                InitShip(this.ships[i]);
+                            }
+                        }
+                    }
+                    if(xhr.readyState === 4 && xhr.status >= 400) {
+                        text = xhr.responseText;
+                        this.error = text;
+                    }
+                };
+            },
+            getPlayer() {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://'+URL+'player'+'/'+TEAM+'/'+SECRET;
+                xhr.open('GET', url);
+                xhr.send();
+                xhr.onreadystatechange = (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 200) {
+                        let playerData = JSON.parse(xhr.responseText);
+                        this.team = playerData;
+                        this.team.Gold = playerData.Gold;
+                        this.team.GoldSpent = playerData.GoldSpent;
+                        window.localStorage.setItem('team', JSON.stringify(this.team));
+                    }
+                    if(xhr.readyState === 4 && xhr.status >= 400) {
+                        text = xhr.responseText;
+                        this.error = text;
+                        this.ready = false;
+                    }
+                };
+            },
+            buyShip() {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://'+URL+'buyShip';
+                xhr.open('POST', url);
+                xhr.send(JSON.stringify({
+                    ShipName: this.newShip.ShipName,
+                    Canons: +this.newShip.Canons,
+                    Sight: +this.newShip.Sight,
+                    Speed: +this.newShip.Speed,
+                    Player: {
+                        Name: this.team.Name,
+                        Secret: this.team.Secret,
+                    }
+                }));
+                xhr.onreadystatechange = (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 201) {
+                        let shipData = JSON.parse(xhr.responseText);
+                        InitShip(shipData);
+                        this.getShips();
+                    }
+                    if(xhr.readyState === 4 && xhr.status >= 400) {
+                        text = xhr.responseText;
+                        this.error = text;
+                    }
+                };
+
+                this.newShip =  {
+                    ShipName: '',
+                    Canons: 0,
+                    Sight: 0,
+                    Speed: 0,
+                };
+            },
+
+            register() {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://'+URL+'registerPlayer';
+                xhr.open('POST', url);
+                xhr.send(JSON.stringify({
+                    'Name': this.team.Name,
+                    'Secret': this.team.Secret,
+                }));
+                xhr.onreadystatechange = (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 201) {
+                        let playerData = JSON.parse(xhr.responseText);
+                        this.team = playerData;
+                        window.localStorage.setItem('team', JSON.stringify(this.team));
+                        window.SECRET = this.team.Secret;
+                        window.TEAM = this.team.Name;
+                        this.ready = true;
+                    }
+                    if(xhr.readyState === 4 && xhr.status >= 400) {
+                        text = xhr.responseText;
+                        this.error = text;
+                    }
+                };
+            }
+        }
+    })
+</script>
+<script>
+    function InitShip(shipData) {
+        // TODO you can change your ship controls here if you want
+        new Ship(shipData);
+    }
+
+    // Examle Ship Implementation
+    class Ship {
+        constructor(shipData) {
+            this.id = shipData.id;
+            this.canons = shipData.canons;
+            this.sight = shipData.sight;
+            this.speed = shipData.speed;
+
+            // Websocket connection
+            this.websocket = new WebSocket('ws://'+URL+'shipControl/'+this.id+'/'+TEAM+'/'+SECRET);
+            this.websocket.onopen = (evt) => { this.onOpen(evt) };
+            this.websocket.onclose = (evt) => { this.onClose(evt) };
+            this.websocket.onmessage = (evt) => { this.onMessage(evt) };
+            this.websocket.onerror = (evt) => { this.onError(evt) };
+        }
+
+        onOpen(evt) {
+            console.log('Ship ' + this.id + ' ready');
+        }
+
+        onClose(evt) {
+            console.log('Ship ' + this.id + ' racing pigeons to ship empty');
+        }
+
+        onError(evt) {
+            console.error('Ship ' + this.id + ' racing pigeons are dead', evt);
+        }
+
+        onMessage(evt) {
+            let info = JSON.parse(evt.data);
+            console.log(info);
+
+            // TODO Implement your code for your ships here!
+
+            // You have only 100ms time to react! Your Ship will dissapear after 60 Second Idle
+            this.websocket.send(
+                JSON.stringify({
+                    MoveX: 0,
+                    MoveY: 1,
+                    Attack: ["PORT_wQkGBSYrSQPECsJJ"]
+                })
+            );
+        }
+    }
+</script>
+</body>
+</html>

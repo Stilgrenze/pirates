@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Stilgrenze Pirates</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+        body {
+            background-image: url(assets/Map_background.png);
+            background-size: cover;
+            padding-top: 112px;
+            padding-left: 100px;
+            padding-right: 100px;
+        }
+        .map {
+            background-image: url(assets/background.jpg);
+            background-size: cover;
+            padding: 50px;
+            margin-bottom: 20px;
+        }
+        .players {
+            padding: 20px;
+            background-color: #a68504;
+        }
+        .badge {
+            margin-right: 10px;
+        }
+        .tile {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .ship {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .events {
+            overflow: scroll;
+            max-height: 80vh;
+        }
+        .event {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .event-icon {
+            width: 40px;
+            height: 40px;
+            display: inline-block;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .explosion {
+            position: absolute;
+            height: 50px;
+            width: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .port {
+            position: relative;
+        }
+        .porttext {
+            position: absolute;
+            width: 200px;
+            top: -20px;
+            left: 0;
+            color: white;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container-fluid players">
+        <div class="row">
+            <div class="col">
+                <span class="badge badge-primary" v-for="player in info.players">{{ player.Name }} - {{ player.Gold + player.GoldSpend }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid bgview">
+        <div class="row">
+            <div class="col-md-9 map">
+                <tiles-view v-bind:tiles="info.ocean.Tiles"></tiles-view>
+            </div>
+            <div class="col">
+                <events-view v-bind:events="info.events"></events-view>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="vue.min.js"></script>
+<script src="components/ship.component.js"></script>
+<script src="components/tile.component.js"></script>
+<script src="components/events.component.js"></script>
+<script src="components/portinfo.component.js"></script>
+<script>
+    const URL = 'localhost:1337/';
+    const SECRET = 'eDnZTefaveuddpMF'; // TODO INSERT SECRET HERE
+
+    // Better you change nothing here
+    var app = new Vue({
+        el: '#app',
+        data: {
+            info: {
+                ocean: {},
+                players: {},
+                events: {}
+            }
+        },
+        created: function () {
+            this.getInfo();
+            setInterval(() => {
+                this.getInfo();
+            }, 1000);
+        },
+        methods: {
+
+            getInfo() {
+                const xhr = new XMLHttpRequest();
+                const url = 'http://localhost:1337/status/'+SECRET;
+                xhr.open('GET', url);
+                xhr.send();
+                xhr.onreadystatechange = (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 200) {
+                        this.info = JSON.parse(xhr.responseText);
+
+                        this.info.events = this.info.events.reverse();
+
+                        this.info.players = this.info.players.sort(function(a, b) {
+                            var goldA = +a.Gold;//+ +a.GoldSpent;
+                            var goldB = +b.Gold;// + +b.GoldSpent;
+
+                            if (goldA > goldB) {
+                                return 1;
+                            }
+                            if (goldB > goldA) {
+                                return -1;
+                            }
+                            return 0;
+                        });
+
+                        this.info.players = this.info.players.sort(function (a, b) {
+                            return ('' + a.Name).localeCompare(b.Name);
+                        });
+
+                        // Transpone Tiles
+                        this.info.ocean.Tiles = this.info.ocean.Tiles[0].map((col, i) => this.info.ocean.Tiles.map(row => row[i]))
+                    }
+                };
+            }
+        }
+    })
+</script>
+</body>
+</html>

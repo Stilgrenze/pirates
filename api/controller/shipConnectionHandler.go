@@ -4,13 +4,14 @@ import (
 	"Pirates/api/request"
 	"Pirates/api/response"
 	"Pirates/game"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 const ANSWER_TIME = 100
@@ -18,6 +19,7 @@ const ANSWER_TIME = 100
 type Client struct {
 	ShipId     string
 	ToSlow     bool
+	Lock       *sync.Mutex
 	Connection *websocket.Conn
 }
 
@@ -54,7 +56,7 @@ func (s *ShipConnectionHandler) AddConnection(gc *gin.Context) {
 		return
 	}
 
-	client := Client{shipId, false, conn}
+	client := Client{shipId, false, &sync.Mutex{}, conn}
 	conn.SetCloseHandler(s.removeClientHandler(&client))
 
 	s.mutex.Lock()
@@ -106,8 +108,12 @@ func (s *ShipConnectionHandler) handleClient(client *Client) {
 		return
 	}
 
-	// Write Status to Client
+	// Write Status to Client, only one write at a time is allowed
+	client.Lock.Lock()
 	err := client.Connection.WriteJSON(info)
+	client.Lock.Unlock()
+
+	// Remove client on error
 	if err != nil {
 		s.mutex.Lock()
 		s.closeAndRemoveClient(client)

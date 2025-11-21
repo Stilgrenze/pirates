@@ -1,116 +1,65 @@
 using System;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
+using WebSocketSharp;
 
 public class ShipControl
 {
-    public string ShipName { get; set; }
-    public string Id { get; set; }
-    public int Cannons { get; set; }
-    public int Sight { get; set; }
-    public int Speed { get; set; }
-
-    private ClientWebSocket _socket;
-    private Uri _uri;
-    private CancellationTokenSource _cts;
+	public string name { get; set; }
+    public string id { get; set; }
+    public int cannons { get; set; }
+    public int sight { get; set; }
+    public int speed { get; set; }
+    private WebSocket websocket;
 
     public ShipControl(ShipData shipData)
     {
-        ShipName = shipData.ShipName;
-        Id = shipData.Id;
-        Cannons = shipData.Cannons;
-        Sight = shipData.Sight;
-        Speed = shipData.Speed;
+    	this.name = shipData.ShipName;
+        this.id = shipData.Id;
+        this.cannons = shipData.Cannons;
+        this.sight = shipData.Sight;
+        this.speed = shipData.Speed;
 
-        _socket = new ClientWebSocket();
-        _cts = new CancellationTokenSource();
-
-        _uri = new Uri($"ws://{Config.URL}shipControl/id/{Config.Name}/{Config.Secret}");
-
-        // Start WebSocket connection
-        _ = Connect();
+        // WebSocket connection
+        this.websocket = new WebSocket("ws://" + Config.URL + "shipControl/" + this.id + "/" + Config.Name + "/" + Config.Secret);
+        this.websocket.OnOpen += (sender, e) => this.OnOpen(sender, e);
+        this.websocket.OnClose += (sender, e) => this.OnClose(sender, e);
+        this.websocket.OnMessage += (sender, e) => this.OnMessage(sender, e);
+        this.websocket.OnError += (sender, e) => this.OnError(sender, e);
+        this.websocket.Connect();
     }
 
-    private async Task Connect()
+    private void OnOpen(object sender, EventArgs e)
     {
-        while (!_cts.Token.IsCancellationRequested)
-        {
-            try
-            {
-                await _socket.ConnectAsync(_uri, _cts.Token);
-                Console.WriteLine($"Ship {Id} ready");
-
-                // Start receiving messages
-                await ReceiveLoop();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Ship {Id} connection error: {ex.Message}. Reconnecting in 5s...");
-                await Task.Delay(5000);
-                _socket.Dispose();
-                _socket = new ClientWebSocket();
-            }
-        }
+        Console.WriteLine("Ship " + this.id + " ready");
     }
 
-    private async Task ReceiveLoop()
+    private void OnClose(object sender, CloseEventArgs e)
     {
-        var buffer = new byte[8192];
-
-        while (_socket.State == WebSocketState.Open)
-        {
-            var result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
-
-            if (result.MessageType == WebSocketMessageType.Close)
-            {
-                Console.WriteLine($"Ship {Id} disconnected. Attempting reconnect...");
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cts.Token);
-                break;
-            }
-
-            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-            await OnMessage(message);
-        }
+        // https://en.wikipedia.org/wiki/IP_over_Avian_Carriers
+        Console.WriteLine("Ship " + this.id + " no more pigeons to send");
     }
 
-    private async Task OnMessage(string json)
+    private void OnError(object sender, WebSocketSharp.ErrorEventArgs e)
     {
-        var info = JsonConvert.DeserializeObject(json);
+        // https://en.wikipedia.org/wiki/IP_over_Avian_Carriers
+        Console.Error.WriteLine("Ship " + this.id + " pigeons died: " + e.Message);
+    }
+
+    private void OnMessage(object sender, MessageEventArgs e)
+    {
+        var info = Newtonsoft.Json.JsonConvert.DeserializeObject(e.Data);
         Console.WriteLine(info);
 
-        // TODO: implement your game logic here (within 100 ms)
-
-        var command = new
-        {
-            MoveX = -1,
-            MoveY = 0,
-            Attack = new string[] { "PORT_wQkGBSYrSQPECsJJ" }
-        };
-
-        await SendCommand(command);
-    }
-
-    private async Task SendCommand(object command)
-    {
-        if (_socket.State != WebSocketState.Open) return;
-
-        var json = JsonConvert.SerializeObject(command);
-        var bytes = Encoding.UTF8.GetBytes(json);
-        var segment = new ArraySegment<byte>(bytes);
-
-        await _socket.SendAsync(segment, WebSocketMessageType.Text, true, _cts.Token);
-    }
-
-    public async Task Close()
-    {
-        _cts.Cancel();
-        if (_socket.State == WebSocketState.Open)
-        {
-            await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
-        }
-        _socket.Dispose();
+        // TODO Implement your code for your ships here!
+        // You have only 100ms time to react! Your Ship will disappear after 60 Second Idle
+        this.websocket.Send(
+            Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                // TODO Movement here
+                MoveX = -1,
+                MoveY = 0,
+                // TODO Insert your attack here
+                Attack = new string[] { "PORT_wQkGBSYrSQPECsJJ" }
+            })
+        );
     }
 }

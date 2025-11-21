@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 public static class Config
 {
-    public static string URL = "162.55.58.253:1337/";
-    public static string Name = "CSharp_Team";
-    public static string Secret = "Test123";
+    public static string URL = "";
+    public static string Name = "C_Sharp_Team";
+    public static string Secret = "supersecret";
 }
 
 class Program

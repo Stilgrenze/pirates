@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="utf-8" />
-    <title>Stilgrenze Pirates</title>
+    <title>HEDGEHOG Pirates</title>
     <link rel="stylesheet" href="bootstrap.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <style>
@@ -58,7 +58,7 @@
                         <input v-model="newShip.ShipName" type="text" class="form-control" placeholder="Ship Name">
                     </div>
                     <div class="form-group">
-                        <input v-model="newShip.Canons" type="text" class="form-control" placeholder="Canons">
+                        <input v-model="newShip.Cannons" type="text" class="form-control" placeholder="Cannons">
                     </div>
                     <div class="form-group">
                         <input v-model="newShip.Sight" type="text" class="form-control" placeholder="Sight">
@@ -77,7 +77,7 @@
                         <th scope="col">#</th>
                         <th scope="col">id</th>
                         <th scope="col">Name</th>
-                        <th scope="col">Canons</th>
+                        <th scope="col">Cannons</th>
                         <th scope="col">Speed</th>
                         <th scope="col">Sight</th>
                     </tr>
@@ -87,7 +87,7 @@
                             <th scope="row">{{ index }}</th>
                             <td>{{ ship.id }}</td>
                             <td>{{ ship.name }}</td>
-                            <td>{{ ship.canons }}</td>
+                            <td>{{ ship.cannons }}</td>
                             <td>{{ ship.speed }}</td>
                             <td>{{ ship.sight }}</td>
                         </tr>
@@ -98,10 +98,8 @@
     </div>
 </div>
 <script src="vue.js"></script>
+<script src="client.js"></script>
 <script>
-    // TODO Insert URL of the Server here
-    const URL = 'localhost:1337/';
-
     // Better you change nothing here, if you don't know what you do
     var app = new Vue({
         el: '#app',
@@ -118,7 +116,7 @@
             },
             newShip: {
                 ShipName: '',
-                Canons: '',
+                Cannons: '',
                 Sight: '',
                 Speed: '',
             }
@@ -148,8 +146,7 @@
                 xhr.send();
                 xhr.onreadystatechange = (e) => {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        let ships = JSON.parse(xhr.responseText);
-                        this.ships = ships;
+                        this.ships = JSON.parse(xhr.responseText);
 
                         if (init) {
                             for (var i = 0; i < this.ships.length; i++) {
@@ -189,7 +186,7 @@
                 xhr.open('POST', url);
                 xhr.send(JSON.stringify({
                     ShipName: this.newShip.ShipName,
-                    Canons: +this.newShip.Canons,
+                    Cannons: +this.newShip.Cannons,
                     Sight: +this.newShip.Sight,
                     Speed: +this.newShip.Speed,
                     Player: {
@@ -211,7 +208,7 @@
 
                 this.newShip =  {
                     ShipName: '',
-                    Canons: 0,
+                    Cannons: 0,
                     Sight: 0,
                     Speed: 0,
                 };
@@ -227,8 +224,7 @@
                 }));
                 xhr.onreadystatechange = (e) => {
                     if(xhr.readyState === 4 && xhr.status === 201) {
-                        let playerData = JSON.parse(xhr.responseText);
-                        this.team = playerData;
+                        this.team = JSON.parse(xhr.responseText);
                         window.localStorage.setItem('team', JSON.stringify(this.team));
                         window.SECRET = this.team.Secret;
                         window.TEAM = this.team.Name;
@@ -242,57 +238,6 @@
             }
         }
     })
-</script>
-<script>
-    function InitShip(shipData) {
-        // TODO you can change your ship controls here if you want
-        new Ship(shipData);
-    }
-
-    // Examle Ship Implementation
-    class Ship {
-        constructor(shipData) {
-            this.id = shipData.id;
-            this.canons = shipData.canons;
-            this.sight = shipData.sight;
-            this.speed = shipData.speed;
-
-            // Websocket connection
-            this.websocket = new WebSocket('ws://'+URL+'shipControl/'+this.id+'/'+TEAM+'/'+SECRET);
-            this.websocket.onopen = (evt) => { this.onOpen(evt) };
-            this.websocket.onclose = (evt) => { this.onClose(evt) };
-            this.websocket.onmessage = (evt) => { this.onMessage(evt) };
-            this.websocket.onerror = (evt) => { this.onError(evt) };
-        }
-
-        onOpen(evt) {
-            console.log('Ship ' + this.id + ' ready');
-        }
-
-        onClose(evt) {
-            console.log('Ship ' + this.id + ' racing pigeons to ship empty');
-        }
-
-        onError(evt) {
-            console.error('Ship ' + this.id + ' racing pigeons are dead', evt);
-        }
-
-        onMessage(evt) {
-            let info = JSON.parse(evt.data);
-            console.log(info);
-
-            // TODO Implement your code for your ships here!
-
-            // You have only 100ms time to react! Your Ship will dissapear after 60 Second Idle
-            this.websocket.send(
-                JSON.stringify({
-                    MoveX: 0,
-                    MoveY: 1,
-                    Attack: ["PORT_wQkGBSYrSQPECsJJ"]
-                })
-            );
-        }
-    }
 </script>
 </body>
 </html>
